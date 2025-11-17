@@ -139,6 +139,13 @@ function showDiscountCardDetail(card) {
  * 确认购买优惠卡（点击"确认购买"按钮）
  */
 export async function confirmCardPurchase() {
+    if (STATE.cart.some(item => item.is_pass)) {
+        const passItem = STATE.cart.find(item => item.is_pass);
+        const passProduct = STATE.products.find(p => p.id === passItem.product_id);
+        currentCard = { ...passProduct, ...passItem };
+    }
+
+
     if (!currentCard) {
         toast('未选择优惠卡');
         return;
@@ -146,7 +153,7 @@ export async function confirmCardPurchase() {
 
     // 1. 检查订单环境
     const envCheck = checkOrderEnvironment();
-    if (!envCheck.valid) {
+    if (!envCheck.valid && !currentCard.is_pass) {
         toast(envCheck.message);
         return;
     }
@@ -271,8 +278,9 @@ async function handlePassPayment(paymentMethod) {
     bootstrap.Modal.getInstance(document.getElementById('passPaymentModal'))?.hide();
 
     try {
+        const passPlanId = pendingPurchaseCard.pass_plan_id || pendingPurchaseCard.id;
         const response = await submitPassPurchaseAPI(
-            pendingPurchaseCard.pass_plan_id,
+            passPlanId,
             secondaryPhone,
             paymentMethod
         );

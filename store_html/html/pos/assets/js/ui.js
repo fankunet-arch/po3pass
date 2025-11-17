@@ -456,12 +456,18 @@ export function refreshCartUI() {
                     </div>
                     <div class="ms-auto text-end">
                         <div class="fw-bold">${fmtEUR(item.unit_price_eur * item.qty)}</div>
+                        ${!item.is_pass ? `
                         <div class="qty-stepper mt-1">
                             <button class="btn btn-sm btn-outline-secondary" data-act="del" data-id="${item.id}"><i class="bi bi-trash"></i></button>
-                            <button class_name="btn btn-sm btn-outline-secondary" data-act="dec" data-id="${item.id}"><i class="bi bi-dash"></i></button>
+                            <button class="btn btn-sm btn-outline-secondary" data-act="dec" data-id="${item.id}"><i class="bi bi-dash"></i></button>
                             <span class="px-1">${item.qty}</span>
                             <button class="btn btn-sm btn-outline-secondary" data-act="inc" data-id="${item.id}"><i class="bi bi-plus"></i></button>
                         </div>
+                        ` : `
+                        <div class="qty-stepper mt-1">
+                            <button class="btn btn-sm btn-outline-secondary" data-act="del" data-id="${item.id}"><i class="bi bi-trash"></i></button>
+                        </div>
+                        `}
                     </div>
                 </div>
             </div>

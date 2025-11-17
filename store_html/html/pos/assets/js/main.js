@@ -33,7 +33,7 @@ import { checkShiftStatus, initializeShiftModals, handleStartShift, handleForceS
 // [GEMINI 架构] 导入新的估清模块
 import { openAvailabilityPanel, handleAvailabilityToggle, handleSoldOutDecisionKeep, handleSoldOutDecisionReset } from './modules/availability.js';
 // [优惠卡购买] 导入优惠卡模块
-import { initDiscountCardEvents } from './modules/discountCard.js';
+import { initDiscountCardEvents, confirmCardPurchase } from './modules/discountCard.js';
 
 console.log("Modules imported successfully in main.js");
 
@@ -154,7 +154,40 @@ function bindEvents() {
   $document.on('click', '#category_scroller .nav-link', function() { STATE.active_category_key = $(this).data('cat'); renderCategories(); renderProducts(); });
   $document.on('input', '#search_input', renderProducts);
   $document.on('click', '#clear_search', () => { $('#search_input').val('').trigger('input'); });
-  $document.on('click', '.product-card', function() { openCustomize($(this).data('id')); });
+  $document.on('click', '.product-card', function() {
+    const isPass = $(this).data('is-pass');
+    if (isPass) {
+        if (STATE.cart.length > 0) {
+            toast(t('error_cart_has_products'));
+            return;
+        }
+        const productId = $(this).data('id');
+        const product = STATE.products.find(p => p.id === productId);
+        if (product) {
+            const variant = product.variants.find(v => v.is_default) || product.variants[0];
+            const passItem = {
+                id: `pass_${product.id}`,
+                product_id: product.id,
+                product_code: product.product_code,
+                title: lang() === 'es' ? product.title_es : product.title_zh,
+                variant_name: lang() === 'es' ? variant.name_es : variant.name_zh,
+                qty: 1,
+                unit_price_eur: variant.price_eur,
+                base_price_eur: variant.price_eur,
+                is_pass: true,
+            };
+            STATE.cart.push(passItem);
+            calculatePromotions();
+            toast('优惠卡已添加');
+        }
+    } else {
+        if (STATE.cart.some(item => item.is_pass)) {
+            toast(t('error_cart_has_products'));
+            return;
+        }
+        openCustomize($(this).data('id'));
+    }
+  });
   $document.on('change', 'input[name="variant_selector"]', updateCustomizePrice);
   $document.on('click', '#addon_list .addon-chip', function() { $(this).toggleClass('active'); updateCustomizePrice(); });
   $document.on('change', 'input[name="ice"], input[name="sugar"]', updateCustomizePrice);
@@ -167,7 +200,13 @@ function bindEvents() {
   $document.on('click', '#apply_points_btn', () => calculatePromotions());
 
   // --- Payment ---
-  $document.on('click', '#btn_cart_checkout', openPaymentModal);
+  $document.on('click', '#btn_cart_checkout', function() {
+    if (STATE.cart.some(item => item.is_pass)) {
+        confirmCardPurchase();
+    } else {
+        openPaymentModal();
+    }
+  });
   $document.on('click', '#btn_confirm_payment', initiatePaymentConfirmation);
   $document.on('click', '[data-pay-method]', function() { addPaymentPart($(this).data('pay-method')); });
   $document.on('click', '.remove-part-btn', function() { $(this).closest('.payment-part').remove(); updatePaymentState(); });
