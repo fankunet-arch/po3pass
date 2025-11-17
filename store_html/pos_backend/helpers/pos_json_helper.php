@@ -37,6 +37,17 @@ if (!function_exists('json_ok')) {
     }
 }
 
+if (!function_exists('json_error_localized')) {
+    /**
+     * 发送本地化的 JSON 错误响应
+     */
+    function json_error_localized(string $message_zh, string $message_es, int $http_code = 400, $data = null): void {
+        $lang = $_SESSION['pos_lang'] ?? 'zh';
+        $message = $lang === 'es' ? $message_es : $message_zh;
+        json_error($message, $http_code, $data);
+    }
+}
+
 if (!function_exists('json_error')) {
     /**
      * 发送失败的 JSON 响应并退出

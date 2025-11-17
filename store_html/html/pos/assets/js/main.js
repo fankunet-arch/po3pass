@@ -29,7 +29,7 @@ import { handleSettingChange } from './modules/settings.js';
 import { findMember, unlinkMember, showCreateMemberModal, createMember } from './modules/member.js';
 import { initializePrintSimulator, printReceipt } from './modules/print.js';
 // [GHOST_SHIFT_FIX v5.2] 导入 handleForceStartShift 和 renderGhostShiftModalText
-import { checkShiftStatus, initializeShiftModals, handleStartShift, handleForceStartShift, renderGhostShiftModalText } from './modules/shift.js'; 
+import { checkShiftStatus, initializeShiftModals, handleStartShift, handleForceStartShift, renderGhostShiftModalText } from './modules/shift.js';
 // [GEMINI 架构] 导入新的估清模块
 import { openAvailabilityPanel, handleAvailabilityToggle, handleSoldOutDecisionKeep, handleSoldOutDecisionReset } from './modules/availability.js';
 // [优惠卡购买] 导入优惠卡模块
@@ -57,7 +57,7 @@ function startClock() {
             hour12: false
         });
     }
-    tick(); 
+    tick();
     setInterval(tick, 1000);
 }
 
@@ -107,25 +107,25 @@ function showUnclosedEodOverlay(unclosedDate) {
 
 
 function bindEvents() {
-  console.log("Binding events..."); 
+  console.log("Binding events...");
 
   const $document = $(document);
 
   // --- Language & Sync (using delegation) ---
-  $document.on('click', '.dropdown-menu [data-lang]', function(e) { 
+  $document.on('click', '.dropdown-menu [data-lang]', function(e) {
       e.preventDefault();
       const newLang = $(this).data('lang');
-      
+
       $('.dropdown-menu [data-lang]').removeClass('active');
       $(`.dropdown-menu [data-lang="${newLang}"]`).addClass('active');
-      
+
       STATE.lang = newLang;
       localStorage.setItem('POS_LANG', STATE.lang);
-      
+
       // 1. 翻译所有带 [data-i18n-key] 的元素
       // [FIX 4-4.png] applyI18N 现在会自动更新所有语言按钮的文本
       applyI18N();
-      
+
       // 2. 重新渲染动态内容
       renderCategories();
       renderProducts();
@@ -134,7 +134,7 @@ function bindEvents() {
       updateMemberUI();
 
       // 3. [GHOST_SHIFT_FIX v5.2] 重新渲染幽灵班次弹窗的 {user} 变量
-      renderGhostShiftModalText(); 
+      renderGhostShiftModalText();
 
       // [FIX 4-4.png] 移除以下代码，逻辑已移至 applyI18N
       // const langText = t(`lang_${newLang}`);
@@ -181,7 +181,7 @@ function bindEvents() {
   $document.on('click', '#btn_open_holds', openHoldOrdersPanel);
   $document.on('click', '#btn_open_txn_query', openTxnQueryPanel);
   $document.on('click', '#btn_open_shift_end', () => { new bootstrap.Modal(document.getElementById('endShiftModal')).show(); });
-  
+
   // --- Hold ---
   $document.on('click', '#btn_hold_current_cart', function() { if (STATE.cart.length === 0) { toast(t('tip_empty_cart')); return; } bootstrap.Offcanvas.getInstance('#cartOffcanvas')?.hide(); setTimeout(() => $('#hold_order_note_input').focus(), 400); });
   $document.on('click', '#btn_create_new_hold', createHoldOrder);
@@ -203,13 +203,13 @@ function bindEvents() {
   $document.on('click', '#member_section .btn-create-member, #btn_show_create_member', function(e) { e.preventDefault(); showCreateMemberModal($('#member_search_phone').val(), null); });
   // [FIX 2.3] 新增详情按钮监听
   $document.on('click', '#btn_edit_member', function(e) { e.preventDefault(); if (STATE.activeMember) { showCreateMemberModal(null, STATE.activeMember); } });
-  
+
   $document.on('submit', '#form_create_member', function(e) {
       e.preventDefault();
       // [FIX 2.3] 检查按钮类型，防止在“详情”模式下提交
       const submitBtn = $(this).find('button[type="submit"]');
       if (submitBtn.length === 0) { // 如果按钮被改成了 type="button" (详情模式)
-          return; 
+          return;
       }
       createMember({ phone_number: $('#member_phone').val(), first_name: $('#member_firstname').val(), last_name: $('#member_lastname').val(), email: $('#member_email').val(), birthdate: $('#member_birthdate').val() });
   });
@@ -218,7 +218,7 @@ function bindEvents() {
   $document.on('click', '.btn-start-pass-redeem', function() {
       const passId = parseInt($(this).data('pass-id'));
       if (!STATE.activeMember || !STATE.activeMember.passes) return;
-      
+
       const pass = STATE.activeMember.passes.find(p => p.pass_id === passId);
       if (pass) {
           STATE.activePassSession = pass;
@@ -272,11 +272,26 @@ function bindEvents() {
   $document.on('click', '#btn_sold_out_decision_reset', handleSoldOutDecisionReset);
   // --- [估清] 结束 ---
 
+  // Pass purchase success modal cleanup
+  const cardPurchaseSuccessModal = document.getElementById('cardPurchaseSuccessModal');
+  if (cardPurchaseSuccessModal) {
+      cardPurchaseSuccessModal.addEventListener('hidden.bs.modal', () => {
+          if (STATE.pendingPassReset) {
+              unlinkMember();
+              STATE.cart = [];
+              calculatePromotions();
+              STATE.pendingPassReset = false;
+              // Navigate back to home by reloading the page
+              window.location.reload();
+          }
+      });
+  }
 
-  console.log("Event bindings complete."); 
+
+  console.log("Event bindings complete.");
 }
 
-// [GEMINI 架构] 移除所有估清函数 (handleSoldOutDecisionKeep, handleSoldOutDecisionReset, 
+// [GEMINI 架构] 移除所有估清函数 (handleSoldOutDecisionKeep, handleSoldOutDecisionReset,
 // openAvailabilityPanel, handleAvailabilityToggle)，它们已迁移到 'modules/availability.js'
 
 async function initApplication() {
@@ -292,7 +307,7 @@ async function initApplication() {
             STATE.unclosedEodDate = eodStatusResult.data.unclosed_date;
             showUnclosedEodOverlay(eodStatusResult.data.unclosed_date);
             console.log("Previous EOD unclosed. Blocking UI.");
-            return; 
+            return;
         }
         STATE.unclosedEodDate = null;
         console.log("EOD check passed or not required.");
@@ -300,8 +315,8 @@ async function initApplication() {
         console.log("Fetching initial data...");
         // [GEMINI SIF_DR_FIX] START: Store SIF declaration from API
         // Await the fetch so we can access its result
-        const initialDataResult = await fetchInitialData(); 
-        
+        const initialDataResult = await fetchInitialData();
+
         // Check the result and store the declaration text in our global STATE
         if (initialDataResult && initialDataResult.data && initialDataResult.data.sif_declaration) {
             STATE.sifDeclaration = initialDataResult.data.sif_declaration;
@@ -313,9 +328,9 @@ async function initApplication() {
         console.log("Initial data fetched (or attempted). STATE after fetch:", JSON.parse(JSON.stringify(STATE)));
 
         // --- CORE FIX: Removed the fatal error check for empty products/categories ---
-        
+
         console.log("Essential data check skipped (as per fix), allowing empty stores.");
-        
+
 		const opsBody = document.querySelector('#opsOffcanvas .offcanvas-body');
 		if (opsBody) {
 			// [修复问题1] 修正了 估清按钮 的 span，添加了 data-i18n
@@ -324,7 +339,7 @@ async function initApplication() {
 				<div class="col-6 col-md-3"><button class="btn btn-outline-ink w-100 py-3" id="btn_open_txn_query"><i class="bi bi-clock-history d-block fs-2 mb-2"></i><span data-i18n="txn_query">交易查询</span></button></div>
 				<div class="col-6 col-md-3"><button class="btn btn-outline-ink w-100 py-3" id="btn_open_eod"><i class="bi bi-calendar-check d-block fs-2 mb-2"></i><span data-i18n="eod">日结</span></button></div>
 				<div class="col-6 col-md-3"><button class="btn btn-outline-ink w-100 py-3" id="btn_open_holds"><i class="bi bi-inboxes d-block fs-2 mb-2"></i><span data-i18n="holds">挂起单</span></button></div>
-				
+
 				<div class="col-6 col-md-3"><button class="btn btn-outline-ink w-100 py-3" id="btn_open_availability_panel"><i class="bi bi-slash-circle d-block fs-2 mb-2"></i><span data-i18n="availability_panel">商品估清</span></button></div>
 
 				<div class="col-6 col-md-3"><button class="btn btn-outline-ink w-100 py-3" data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas"><i class="bi bi-gear d-block fs-2 mb-2"></i><span data-i18n="settings">设置</span></button></div>

@@ -6,9 +6,11 @@
 import { STATE } from '../state.js';
 import { t, toast, fmtEUR } from '../utils.js';
 import { findMember, unlinkMember } from './member.js';
+import { submitPassPurchaseAPI } from '../api.js';
 
 let currentCard = null; // 当前选中的优惠卡
 let pendingPurchaseCard = null; // 待购买的优惠卡（二次验证后使用）
+let secondaryPhone = ''; // 二次验证的手机号
 
 /**
  * 打开优惠卡列表
@@ -122,6 +124,12 @@ function showDiscountCardDetail(card) {
     // 备注
     document.getElementById('card_detail_notes').textContent = card.notes || '';
 
+    // 重要提示
+    const lang = STATE.lang || 'zh';
+    const notice = lang === 'es' ? card.important_notice_es : card.important_notice_zh;
+    document.getElementById('card_detail_important_notice').textContent = notice || '';
+
+
     // 显示详情 Modal
     const modal = new bootstrap.Modal(document.getElementById('discountCardDetailModal'));
     modal.show();
@@ -220,7 +228,7 @@ function showPhoneVerificationModal() {
 export async function handlePhoneVerification(event) {
     event.preventDefault();
 
-    const inputPhone = sanitizePhoneInput(document.getElementById('phone_verification_input').value);
+    secondaryPhone = sanitizePhoneInput(document.getElementById('phone_verification_input').value);
     const memberPhone = sanitizePhoneInput(STATE.activeMember?.phone_number || STATE.activeMember?.phone || '');
 
     // 清除错误信息
@@ -228,7 +236,7 @@ export async function handlePhoneVerification(event) {
     errorDiv.classList.add('d-none');
 
     // 验证手机号是否匹配
-    if (inputPhone !== memberPhone) {
+    if (secondaryPhone !== memberPhone) {
         errorDiv.textContent = t('phone_mismatch_error');
         errorDiv.classList.remove('d-none');
         return;
@@ -250,22 +258,31 @@ async function proceedToPayment() {
         return;
     }
 
-    // 设置优惠卡购买模式
-    STATE.purchasingDiscountCard = {
-        ...pendingPurchaseCard,
-        member_id: STATE.activeMember.id
-    };
-
-    // 设置支付总额
-    STATE.payment = {
-        total: parseFloat(pendingPurchaseCard.sale_price || 0),
-        parts: []
-    };
-
-    // 打开支付弹窗（支付模块会检测 STATE.purchasingDiscountCard 并限制支付方式）
-    const { openPaymentModal } = await import('./payment.js');
-    openPaymentModal();
+    const paymentModal = new bootstrap.Modal(document.getElementById('passPaymentModal'));
+    paymentModal.show();
 }
+
+async function handlePassPayment(paymentMethod) {
+    if (!pendingPurchaseCard || !STATE.activeMember) {
+        toast('购买信息丢失，请重新操作');
+        return;
+    }
+
+    bootstrap.Modal.getInstance(document.getElementById('passPaymentModal'))?.hide();
+
+    try {
+        const response = await submitPassPurchaseAPI(
+            pendingPurchaseCard.pass_plan_id,
+            secondaryPhone,
+            paymentMethod
+        );
+        handleBackendActions(response);
+    } catch (error) {
+        console.error('Pass purchase failed:', error);
+        toast('购买失败，请稍后重试');
+    }
+}
+
 
 /**
  * 购卡成功后返回首页
@@ -286,6 +303,24 @@ export function handlePurchaseDone() {
 
     toast(t('card_purchase_success'));
 }
+
+/**
+ * 处理后端返回的动作
+ */
+function handleBackendActions(response) {
+    if (response.status === 'success') {
+        if (response.data.actions.includes('SHOW_PASS_SUCCESS_PAGE')) {
+            // Show success modal
+            const successModal = new bootstrap.Modal(document.getElementById('cardPurchaseSuccessModal'));
+            successModal.show();
+            // Set a flag to perform cleanup actions when the modal is closed
+            STATE.pendingPassReset = true;
+        }
+    } else {
+        toast(response.message);
+    }
+}
+
 
 /**
  * 辅助函数：净化手机号输入
@@ -324,4 +359,8 @@ export function initDiscountCardEvents() {
 
     // 购卡成功后返回首页
     document.getElementById('btn_card_purchase_done')?.addEventListener('click', handlePurchaseDone);
+
+    // Pass payment buttons
+    document.getElementById('btn_pass_pay_cash')?.addEventListener('click', () => handlePassPayment('cash'));
+    document.getElementById('btn_pass_pay_card')?.addEventListener('click', () => handlePassPayment('card'));
 }

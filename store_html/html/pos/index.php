@@ -66,7 +66,7 @@ $cache_version = time();
                 <li><a class="dropdown-item" href="logout.php" data-i18n="navbar_logout"><i class="bi bi-box-arrow-right me-2"></i>退出登录</a></li>
             </ul>
         </div>
-        
+
         <div class="dropdown">
             <button class="btn btn-outline-ink btn-sm dropdown-toggle px-2" data-bs-toggle="dropdown" id="lang_toggle"><span class="flag">🇨🇳</span> <span data-i18n="lang_zh">中文</span></button>
             <ul class="dropdown-menu dropdown-menu-end">
@@ -82,15 +82,15 @@ $cache_version = time();
   <main class="container-fluid pos-container"><div class="row g-2"><div class="col-12"><div class="input-group search-box prominent"><span class="input-group-text"><i class="bi bi-search"></i></span><input type="text" class="form-control" id="search_input" placeholder="搜索饮品或拼音简称…" data-i18n-placeholder="placeholder_search"><button class="btn btn-outline-ink" id="clear_search"><i class="bi bi-x-lg"></i></button></div></div><div class="col-12"><div id="category_scroller" class="nav nav-pills flex-nowrap overflow-x-auto gap-2"></div></div></div><div class="row row-cols-5 g-2 mt-2" id="product_grid"></div></main>
 
   <div class="pos-bottombar border-0"><div class="container-fluid d-flex align-items-center justify-content-between" id="bottom_bar"><button class="btn btn-outline-ink d-flex align-items-center gap-2" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas" id="btn_cart_open"><i class="bi bi-bag-check"></i> <span data-i18n="cart">购物车</span><span class="badge bg-brand-soft text-brand fw-semibold" id="cart_count">0</span></button>
-  
+
   <div class="text-end me-auto ms-3 small text-muted d-none d-sm-block"><div data-i18n="total_before_discount">合计</div><div class="fs-5 text-ink fw-semibold" id="cart_subtotal">€0.00</div></div>
-  
+
   <div class="d-flex gap-2 align-items-stretch"><button class="btn btn-outline-ink" data-bs-toggle="offcanvas" data-bs-target="#opsOffcanvas" id="btn_ops"><i class="bi bi-grid"></i> <span data-i18n="more">功能</span></button></div></div></div>
 
   <div class="offcanvas offcanvas-end offcanvas-sheet" tabindex="-1" id="cartOffcanvas">
     <div class="offcanvas-header border-0"><h5 class="offcanvas-title"><i class="bi bi-bag"></i> <span data-i18n="cart">购物车</span></h5><button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button></div>
     <div class="offcanvas-body p-0 d-flex flex-column">
-      
+
       <div id="member_section" class="p-3 border-bottom border-sheet">
           <div id="member_search">
               <div class="input-group">
@@ -121,7 +121,7 @@ $cache_version = time();
           </div>
       </div>
       <div id="cart_items" class="list-group list-group-flush flex-grow-1 overflow-y-auto"></div>
-      
+
       <div class="p-3 border-top border-sheet mt-auto" id="cart_footer">
         <div class="input-group mb-3"><input type="text" class="form-control" id="coupon_code_input" placeholder="输入优惠码"><button class="btn btn-outline-secondary" type="button" id="apply_coupon_btn">应用</button></div>
         <div id="points_redemption_section" class="mb-3">
@@ -134,7 +134,7 @@ $cache_version = time();
                 <span id="points_feedback"></span>
             </div>
         </div>
-        
+
         <div class="d-flex justify-content-between align-items-center small text-muted">
             <span data-i18n="total_before_discount">合计</span>
             <span id="cart_subtotal_offcanvas">€0.00</span>
@@ -143,12 +143,12 @@ $cache_version = time();
             <span data-i18n="eod_discounts">折扣总额</span>
             <span id="cart_discount">€0.00</span>
         </div>
-        
+
         <div class="d-flex justify-content-between align-items-center fs-5 mt-2">
             <span class="fw-semibold" data-i18n="payable">应收</span>
             <span id="cart_final_total" class="fw-bold text-brand">€0.00</span>
         </div>
-        
+
         <div class="d-flex gap-2 mt-3"><button class="btn btn-outline-secondary flex-grow-1" id="btn_hold_current_cart" data-i18n="hold_this">挂起此单</button><button class="btn btn-brand flex-grow-1" id="btn_cart_checkout"><i class="bi bi-credit-card-2-front"></i> <span id="btn_cart_checkout_label" data-i18n="go_checkout">去结账</span></button></div>
       </div>
     </div>
@@ -199,7 +199,7 @@ $cache_version = time();
   <div class="modal fade" id="orderSuccessModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false"><div class="modal-dialog modal-dialog-centered"><div class="modal-content modal-sheet"><div class="modal-body text-center p-4"><i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i><h3 class="mt-3" data-i18n="order_success">下单成功</h3><p class="text-muted" data-i18n="invoice_number">票号</p><h4 class="mb-3" id="success_invoice_number">--</h4><p class="text-muted small" data-i18n="qr_code_info">合规二维码内容 (TicketBAI/Veri*Factu)</p><div class="p-2 bg-light rounded border"><code id="success_qr_content" style="word-break: break-all;">-</code></div><button type="button" class="btn btn-brand w-100 mt-4" data-bs-dismiss="modal" data-i18n="new_order">开始新订单</button></div></div></div></div>
 
   <div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false"><div class="modal-dialog modal-dialog-centered"><div class="modal-content modal-sheet"><div class="modal-header"><h5 class="modal-title" data-i18n="checkout">结账</h5><button type="button" class="btn-close" data-bs-dismiss="modal" id="btn_cancel_payment"></button></div><div class="modal-body p-4"><div class="row text-center mb-3"><div class="col"><small data-i18n="receivable">应收</small><div class="fs-4 fw-bold text-brand" id="payment_total_display">€0.00</div></div><div class="col"><small data-i18n="paid">已收</small><div class="fs-4 fw-bold" id="payment_paid_display">€0.00</div></div><div class="col"><small data-i18n="remaining">剩余</small><div class="fs-4 fw-bold text-info" id="payment_remaining_display">€0.00</div></div><div class="col"><small data-i18n="change">找零</small><div class="fs-4 fw-bold" id="payment_change_display">€0.00</div></div></div><div id="payment_parts_container" class="mb-3"></div>
-  
+
   <div class="mb-3"><small class="text-muted">快捷现金</small><div class="d-flex flex-wrap gap-2 mt-1"><button class="btn btn-outline-secondary btn-quick-cash" data-value="5">€5</button><button class="btn btn-outline-secondary btn-quick-cash" data-value="10">€10</button><button class="btn btn-outline-secondary btn-quick-cash" data-value="20">€20</button><button class="btn btn-outline-secondary btn-quick-cash" data-value="50">€50</button></div></div>
 
   <div class="mb-2"><small class="text-muted" data-i18n="payment_methods_label">支付方式</small></div><div id="payment_method_selector" class="d-flex flex-wrap gap-2"><button class="btn btn-outline-primary btn-payment-method" data-pay-method="Cash"><i class="bi bi-cash-coin me-1"></i><span data-i18n="cash_payment">现金</span></button><button class="btn btn-outline-primary btn-payment-method" data-pay-method="Card"><i class="bi bi-credit-card me-1"></i><span data-i18n="card_payment">刷卡</span></button><button class="btn btn-outline-primary btn-payment-method" data-pay-method="Bizum" disabled><i class="bi bi-phone me-1"></i>Bizum</button><button class="btn btn-outline-primary btn-payment-method" data-pay-method="Platform"><i class="bi bi-qr-code me-1"></i><span data-i18n="platform_code">平台码</span></button></div></div><div class="modal-footer d-grid"><button type="button" id="btn_confirm_payment" class="btn btn-primary w-100">确认收款</button></div></div></div></div>
@@ -262,7 +262,7 @@ $cache_version = time();
       </div>
     </div>
   </div>
-  
+
   <div class="modal fade" id="startShiftModal" tabindex="-1" aria-labelledby="startShiftModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content modal-sheet">
@@ -358,7 +358,7 @@ $cache_version = time();
       </div>
     </div>
   </div>
-  
+
   <div class="modal fade" id="eodResultModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -665,7 +665,7 @@ $cache_version = time();
         </div>
 
         <!-- 重要提示区 -->
-        <div class="alert alert-warning border-warning">
+        <div id="card_detail_important_notice" class="alert alert-warning border-warning">
           <h6 class="alert-heading fw-bold">
             <i class="bi bi-exclamation-triangle-fill me-2"></i>
             <span data-i18n="important_notice">重要提示</span>
@@ -733,6 +733,31 @@ $cache_version = time();
           </p>
         </div>
         <button type="button" class="btn btn-brand w-100 mt-3" id="btn_card_purchase_done" data-i18n="back_to_home">返回首页</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pass Payment Modal -->
+<div class="modal fade" id="passPaymentModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content modal-sheet">
+      <div class="modal-header">
+        <h5 class="modal-title" data-i18n="pass_payment_title">优惠卡支付</h5>
+      </div>
+      <div class="modal-body">
+        <p data-i18n="pass_payment_instruction">购买优惠卡仅支持现金或银行卡支付。</p>
+        <div class="d-grid gap-2">
+          <button id="btn_pass_pay_cash" class="btn btn-outline-primary btn-lg" data-payment-method="cash">
+            <i class="bi bi-cash-coin me-2"></i> <span data-i18n="cash_payment">现金</span>
+          </button>
+          <button id="btn_pass_pay_card" class="btn btn-outline-primary btn-lg" data-payment-method="card">
+            <i class="bi bi-credit-card me-2"></i> <span data-i18n="card_payment">刷卡</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="cancel">取消</button>
       </div>
     </div>
   </div>

@@ -10,7 +10,7 @@
  * -> 已修复为优先读取 'data' 键，并回退到扁平结构，以实现最大兼容。
  * 2. 修复 `handle_member_create` 中 INSERT 语句使用 `NOW()` 而不是 `UTC_TIMESTAMP()` 的问题。
  */
-
+require_once realpath(__DIR__ . '/../../../../pos_backend/helpers/pos_repo_ext_pass.php');
 /* -------------------------------------------------------------------------- */
 /* Handlers: 迁移自 /pos/api/pos_member_handler.php                */
 /* -------------------------------------------------------------------------- */
@@ -63,7 +63,7 @@ function handle_member_find(PDO $pdo, array $config, array $input_data): void {
 
 
 function handle_member_create(PDO $pdo, array $config, array $input_data): void {
-    
+
     // [GEMINI FIX 2025-11-16] 修复前端 (member.js) 与后端的数据结构不匹配
     // member.js 发送 { data: { phone_number: ... } }
     // 此处优先检查 'data' 键，如果不存在，则回退到根 $input_data
@@ -74,9 +74,9 @@ function handle_member_create(PDO $pdo, array $config, array $input_data): void 
     $phone = trim($data['phone_number'] ?? $data['phone'] ?? '');
     $email = trim($data['email'] ?? '');
     $birthdate = trim($data['birthdate'] ?? '');
-    
+
     if (empty($phone)) json_error('Phone number is required.', 400);
-    
+
     // 依赖: gen_uuid_v4 (来自 pos_helper.php)
     if (!function_exists('gen_uuid_v4')) json_error('Missing dependency: gen_uuid_v4', 500);
     $member_uuid = gen_uuid_v4();
@@ -86,30 +86,30 @@ function handle_member_create(PDO $pdo, array $config, array $input_data): void 
 
         $sql = "
             INSERT INTO pos_members (
-                member_uuid, 
-                first_name, 
-                last_name, 
-                phone_number, 
-                email, 
+                member_uuid,
+                first_name,
+                last_name,
+                phone_number,
+                email,
                 birthdate,
-                member_level_id, 
+                member_level_id,
                 points_balance,
-                created_at, 
+                created_at,
                 updated_at
             ) VALUES (
-                :uuid, 
-                :first_name, 
-                :last_name, 
-                :phone, 
-                :email, 
+                :uuid,
+                :first_name,
+                :last_name,
+                :phone,
+                :email,
                 :birthdate,
-                1, 
+                1,
                 0,
-                UTC_TIMESTAMP(), 
+                UTC_TIMESTAMP(),
                 UTC_TIMESTAMP()
             )
         ";
-        
+
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             ':uuid' => $member_uuid,
@@ -119,11 +119,11 @@ function handle_member_create(PDO $pdo, array $config, array $input_data): void 
             ':email' => $email,
             ':birthdate' => empty($birthdate) ? null : $birthdate, // 允许生日为空
         ]);
-        
+
         $member_id = $pdo->lastInsertId();
-        
+
         $pdo->commit();
-        
+
         // 成功后，按 "find" 接口的格式返回完整数据
         $stmt_find = $pdo->prepare("
             SELECT m.*, ml.level_name_zh, ml.level_name_es
@@ -177,20 +177,18 @@ function handle_member_create(PDO $pdo, array $config, array $input_data): void 
  * 12.(A) 返回 json_ok
  */
 function handle_pass_purchase(PDO $pdo, array $config, array $input_data): void {
-    // 依赖: 
+    // 依赖:
     //   pos_helper.php (ensure_active_shift_or_fail, gen_uuid_v4)
-    //   pos_repo.php (get_member_by_id, get_store_config_full)
-    //   pos_repo_ext_pass.php (get_pass_plan_by_sku)
-    //   pos_pass_helper.php (check_pass_purchase_limits, allocate_vr_invoice_number, create_pass_records)
-    //   pos_json_helper.php (json_ok, json_error)
-    
+    //   pos_repo.php (get_member_by_id, get_store_config_full, get_cart_item_tags)
+    //   pos_repo_ext_pass.php (get_pass_plan_by_sku, validate_pass_purchase_order, allocate_vr_invoice_number, create_pass_records)
+    //   pos_json_helper.php (json_ok, json_error, json_error_localized)
+
     // 1. 检查依赖
     $deps = [
-        'ensure_active_shift_or_fail', 'gen_uuid_v4', 
-        'get_member_by_id', 'get_store_config_full', 
-        'get_pass_plan_by_sku', 
-        'check_pass_purchase_limits', 'allocate_vr_invoice_number', 'create_pass_records',
-        'json_ok', 'json_error'
+        'ensure_active_shift_or_fail', 'gen_uuid_v4',
+        'get_member_by_id', 'get_store_config_full', 'get_cart_item_tags',
+        'get_pass_plan_by_sku', 'validate_pass_purchase_order', 'allocate_vr_invoice_number', 'create_pass_records',
+        'json_ok', 'json_error', 'json_error_localized'
     ];
     foreach ($deps as $dep) {
         if (!function_exists($dep)) json_error("Missing dependency: $dep", 500);
@@ -198,89 +196,110 @@ function handle_pass_purchase(PDO $pdo, array $config, array $input_data): void 
 
     // 1. 校验班次
     ensure_active_shift_or_fail($pdo);
-    
+
     $store_id = (int)$_SESSION['pos_store_id'];
     $user_id = (int)$_SESSION['pos_user_id'];
-    $device_id = (int)($_SESSION['pos_device_id'] ?? 0); // 修复可能的拼写错误
+    $device_id = (int)($_SESSION['pos_device_id'] ?? 0);
 
     // 2. 校验输入
-    $cart_item = $input_data['cart_item'] ?? null;
+    $cart = $input_data['cart'] ?? [];
     $member_id = (int)($input_data['member_id'] ?? 0);
-
-    if (!$cart_item || !is_array($cart_item) || !$member_id) {
-        json_error('Invalid input: cart_item and member_id are required.', 400);
+    $secondary_phone = trim($input_data['secondary_phone_input'] ?? '');
+    $payment_method = trim($input_data['payment_method'] ?? '');
+    $idempotency_key = trim($input_data['idempotency_key'] ?? '');
+    if (empty($idempotency_key)) {
+        json_error('Idempotency key is required.', 400);
     }
-    if (empty($cart_item['sku'])) {
-        json_error('Invalid input: cart_item must have a sku.', 400);
+
+    // 2.1. Pre-purchase validation
+    $tags_map = get_cart_item_tags($pdo, $cart);
+    validate_pass_purchase_order($pdo, $cart, $tags_map, $input_data['promo_result'] ?? null);
+
+
+    if (!$member_id) {
+        json_error('Member ID is required.', 400);
+    }
+
+
+    // 2.2. Member requirement and secondary phone verification
+    $member = get_member_by_id($pdo, $member_id);
+    if (!$member) {
+        json_error('Member not found.', 404);
+    }
+    if ($secondary_phone !== trim($member['phone_number'])) {
+        json_error_localized(
+            '二次输入的手机号与当前登录会员不一致。如需更换会员，请先退出当前会员，再用正确手机号登录后重新购买。',
+            'El número de teléfono introducido en la segunda verificación no coincide con el miembro actualmente conectado. Si desea cambiar de cliente, primero cierre la sesión del miembro actual y vuelva a iniciar sesión con el número correcto antes de realizar la compra.'
+        );
+    }
+
+    // 2.3. Payment method validation
+    if (!in_array($payment_method, ['cash', 'card'])) {
+        json_error_localized(
+            '购买优惠卡仅支持现金或银行卡支付，请更改支付方式。',
+            'La compra de tarjetas promocionales solo admite efectivo o tarjeta bancaria. Por favor, cambie el método de pago.'
+        );
     }
 
     try {
         // 3. 启动事务
         $pdo->beginTransaction();
 
-        // 4. 检查会员
-        $member = get_member_by_id($pdo, $member_id);
-        if (!$member) {
-            json_error('Member not found.', 404);
-        }
-
         // 5. 检查次卡定义 (依赖: pos_repo_ext_pass.php)
-        $plan_details = get_pass_plan_by_sku($pdo, $cart_item['sku']);
+        $pass_item = $cart[0];
+        $plan_details = get_pass_plan_by_sku($pdo, $pass_item['product_code']);
         if (!$plan_details) {
-            json_error('Pass plan not found for sku: ' . $cart_item['sku'], 404);
+            json_error('Pass plan not found for sku: ' . $pass_item['product_code'], 404);
         }
 
-        // 6. 检查购买限制 (依赖: pos_pass_helper.php)
-        // B1 阶段简化: 暂不实现复杂的限制
-        // check_pass_purchase_limits($pdo, $member_id, $plan_details);
-        
         // 7. 分配 VR 票号
-        // 7a. 获取门店配置 (依赖: pos_repo.php)
         $store_config = get_store_config_full($pdo, $store_id);
         if (empty($store_config['invoice_prefix'])) {
             json_error('Store invoice_prefix (VR Series) is not configured.', 500);
         }
-        // 7b. 分配 (依赖: pos_pass_helper.php)
         [$vr_series, $vr_number] = allocate_vr_invoice_number($pdo, $store_config['invoice_prefix']);
         $vr_info = ['series' => $vr_series, 'number' => $vr_number];
 
-        // 8. 写入数据库 (topup_orders, member_passes) (依赖: pos_pass_helper.php)
+        // 8. 写入数据库 (topup_orders, member_passes)
         $context = [
             'store_id' => $store_id,
             'user_id' => $user_id,
             'device_id' => $device_id,
-            'member_id' => $member_id
+            'member_id' => $member_id,
+            'payment_method' => $payment_method,
+            'idempotency_key' => $idempotency_key
         ];
-        $member_pass_id = create_pass_records($pdo, $context, $vr_info, $cart_item, $plan_details);
-        
-        // 9. (B1 阶段) 支付信息暂不处理，假设前端已收款
-        // TODO (B3): 记录支付详情到 topup_orders
-        
+        $member_pass_id = create_pass_records($pdo, $context, $vr_info, $pass_item, $plan_details);
+
         // 10. 提交事务
         $pdo->commit();
-        
-        // 11. 准备打印数据 (B1 阶段可选, B2 必须)
-        $print_jobs = [
-            // [TODO B2] 在此构建 VR 售卡小票
-        ];
 
-        // [GEMINI LOGIC BUG FIX 2025-11-16] 修复 json_ok 参数颠倒
+        // 11. 准备响应
         json_ok([
-            'topup_order_id' => $member_pass_id, // B1 阶段 $member_pass_id 即是
-            'vr_invoice_number' => $vr_info['series'] . '-' . $vr_info['number'],
-            'member_pass_id' => $member_pass_id,
-            'print_jobs' => $print_jobs
-        ], 'Top-up successful.');
+            'success' => true,
+            'message' => 'PASS_PURCHASE_SUCCESS',
+            'actions' => [
+                'LOGOUT_MEMBER',
+                'CLEAR_ORDER',
+                'RESET_TO_HOME',
+                'SHOW_PASS_SUCCESS_PAGE'
+            ],
+            'data' => [
+                'pass_id' => $member_pass_id,
+                'member_id' => $member_id,
+                'phone_masked' => '********' . substr($member['phone_number'], -4)
+            ]
+        ]);
 
     } catch (PDOException $e) {
         $pdo->rollBack();
         json_error('Database error during pass purchase: ' . $e->getMessage(), 500);
     } catch (Exception $e) {
         $pdo->rollBack();
-        // 捕获 check_pass_purchase_limits 等助手函数抛出的特定错误
         json_error('Error during pass purchase: ' . $e->getMessage(), $e->getCode() > 400 ? $e->getCode() : 500);
     }
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* Handlers: 优惠卡列表 (Discount Card List)                             */
@@ -302,7 +321,9 @@ function handle_pass_list(PDO $pdo, array $config, array $input_data): void {
                 max_uses_per_day,
                 sale_sku,
                 sale_price,
-                notes
+                notes,
+                important_notice_zh,
+                important_notice_es
             FROM pass_plans
             WHERE is_active = 1
             ORDER BY sale_price ASC
