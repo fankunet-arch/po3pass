@@ -133,15 +133,25 @@ export async function submitOrderAPI(paymentPayload) {
 /**
  * [B1.3 PASS] 新增：提交次卡售卡订单
  */
-export async function submitPassPurchaseAPI(paymentPayload) {
-     const payload = {
-        cart: STATE.cart,
+export async function submitPassPurchaseAPI(passData, secondaryPhone, paymentMethod) {
+    const idempotencyKey = crypto.randomUUID();
+    const payload = {
         member_id: STATE.activeMember ? STATE.activeMember.id : null,
-        payment: paymentPayload,
-        // 售卡时，促销结果应为0 (由后端 PromotionEngine 保证)
-        promo_result: STATE.calculatedCart 
+        secondary_phone_input: secondaryPhone,
+        payment_method: paymentMethod,
+        idempotency_key: idempotencyKey,
+        cart: [{
+            product_id: passData.sale_sku, // Assuming sale_sku is used as a product_id
+            product_code: passData.sale_sku,
+            qty: 1,
+            unit_price_eur: passData.sale_price,
+            base_price_eur: passData.sale_price,
+            title: passData.name,
+            variant_name: '',
+            // Add other necessary fields if the backend expects them
+        }],
+        promo_result: { coupon_discount: 0, points_discount: 0 } // No promotions
     };
-    // [B1.3] 路由到次卡售卡网关
     return await apiCall(`${POS_API_GATEWAY}?res=pass&act=purchase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

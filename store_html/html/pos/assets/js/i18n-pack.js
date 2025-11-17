@@ -146,7 +146,7 @@ export const I18N = {
     force_start_body: '系统检测到班次 (属于: {user}) 未正确交接。您必须强制结束该班次，才能开始您的新班次。',
     force_start_label: '您的初始备用金 (€)',
     force_start_submit: '强制交班并开始我的新班次',
-    
+
     // --- [B1.4 PASS] I18N Keys ---
     pass_available_passes: '可用次卡',
     pass_no_available: '无可用次卡',
@@ -157,11 +157,11 @@ export const I18N = {
     pass_exit_session_btn: '退出核销模式',
     pass_session_toast_enter: '已进入核销模式。仅显示可核销商品。',
     pass_session_toast_exit: '已退出核销模式。',
-    
+
     // --- [B1.4 P2] Addon I18N ---
     pass_addon_free: '免费',
     pass_addon_paid: '加价 +{PRICE_FMT}',
-    
+
     // --- [B1.4 P4] Print I18N ---
     pass_print_slip_title: '次卡核销凭条',
     pass_print_card_id: '次卡号',
@@ -185,9 +185,11 @@ export const I18N = {
     availability_title: '商品估清管理',
     force_start_title: '操作提醒：发现未结束的班次',
     payment_success: '支付成功',
-    
+
     // [GEMINI 4.png] 新增
-    navbar_logout: '退出登录'
+    navbar_logout: '退出登录',
+    pass_payment_title: '优惠卡支付',
+    pass_payment_instruction: '购买优惠卡仅支持现金或银行卡支付。'
   },
   es: {
     internal:'Interno', lang_zh:'Chino', lang_es:'Español', cart:'Carrito', total_before_discount:'Total', more:'Más',
@@ -286,7 +288,7 @@ export const I18N = {
     force_start_body: 'El sistema detectó que el turno (de: {user}) no se cerró correctamente. Debe forzar el cierre de ese turno para iniciar el suyo.',
     force_start_label: 'Su fondo de caja inicial (€)',
     force_start_submit: 'Forzar Cierre y Empezar Mi Turno',
-    
+
     // --- [B1.4 PASS] I18N Keys ---
     pass_available_passes: 'Pases Disponibles',
     pass_no_available: 'No hay pases disponibles',
@@ -297,7 +299,7 @@ export const I18N = {
     pass_exit_session_btn: 'Salir de Modo Canje',
     pass_session_toast_enter: 'Modo Canje activado. Mostrando solo productos canjeables.',
     pass_session_toast_exit: 'Modo Canje desactivado.',
-    
+
     // --- [B1.4 P2] Addon I18N ---
     pass_addon_free: 'GRATIS',
     pass_addon_paid: 'PAGO EXTRA +{PRICE_FMT}',
@@ -364,11 +366,13 @@ export const I18N = {
     availability_decision_keep_desc: 'Mantener el estado del turno anterior',
     availability_decision_reset: 'Poner todos a la venta',
     availability_decision_reset_desc: 'Marcar todos los productos como disponibles',
-    
+
     // [FIX 4-2.png]
     close: 'Cerrar',
-    
+
     // [GEMINI 4.png] 新增
-    navbar_logout: 'Cerrar Sesión'
+    navbar_logout: 'Cerrar Sesión',
+    pass_payment_title: 'Pago de Tarjeta Promocional',
+    pass_payment_instruction: 'La compra de tarjetas promocionales solo admite pago en efectivo o con tarjeta bancaria.'
   }
 };
