@@ -314,6 +314,7 @@ export async function submitOrder() {
 
             const purchaseData = {
                 member_id: card.member_id,
+                secondary_phone_input: card.secondary_phone_input, // 二次验证的手机号
                 cart_item: {
                     sku: card.sale_sku,
                     name: card.name_zh || card.name,
@@ -321,7 +322,8 @@ export async function submitOrder() {
                     price: parseFloat(card.sale_price || 0),
                     total: parseFloat(card.sale_price || 0)
                 },
-                payment: paymentPayload
+                payment: paymentPayload,
+                promo_result: STATE.calculatedCart // 传递促销结果用于验证
             };
 
             const response = await fetch('api/pos_api_gateway.php?res=pass&act=purchase', {
@@ -381,24 +383,9 @@ export async function submitOrder() {
 
             // [优惠卡购买] 如果是优惠卡购买，使用专用的成功处理
             if (isDiscountCardPurchase) {
-                const phone = STATE.activeMember?.phone_number || STATE.activeMember?.phone || '';
-                const maskedPhone = phone.length > 7
-                    ? phone.substring(0, 3) + 'XXXX' + phone.substring(phone.length - 4)
-                    : phone;
-
-                document.getElementById('success_bound_phone').textContent = maskedPhone;
-
-                // 清空状态
-                STATE.purchasingDiscountCard = null;
-                STATE.cart = [];
-                STATE.activeCouponCode = '';
-                STATE.calculatedCart = null;
-
-                // 退出会员
-                unlinkMember();
-
-                // 显示成功弹窗
-                new bootstrap.Modal('#cardPurchaseSuccessModal').show();
+                // 导入并调用 handleBackendActions
+                const { handleBackendActions } = await import('./discountCard.js');
+                handleBackendActions(result);
 
                 return; // 不再显示普通的成功弹窗
             }

@@ -177,18 +177,18 @@ function handle_member_create(PDO $pdo, array $config, array $input_data): void 
  * 12.(A) 返回 json_ok
  */
 function handle_pass_purchase(PDO $pdo, array $config, array $input_data): void {
-    // 依赖: 
+    // 依赖:
     //   pos_helper.php (ensure_active_shift_or_fail, gen_uuid_v4)
     //   pos_repo.php (get_member_by_id, get_store_config_full)
     //   pos_repo_ext_pass.php (get_pass_plan_by_sku)
     //   pos_pass_helper.php (check_pass_purchase_limits, allocate_vr_invoice_number, create_pass_records)
     //   pos_json_helper.php (json_ok, json_error)
-    
+
     // 1. 检查依赖
     $deps = [
-        'ensure_active_shift_or_fail', 'gen_uuid_v4', 
-        'get_member_by_id', 'get_store_config_full', 
-        'get_pass_plan_by_sku', 
+        'ensure_active_shift_or_fail', 'gen_uuid_v4',
+        'get_member_by_id', 'get_store_config_full',
+        'get_pass_plan_by_sku',
         'check_pass_purchase_limits', 'allocate_vr_invoice_number', 'create_pass_records',
         'json_ok', 'json_error'
     ];
@@ -198,20 +198,53 @@ function handle_pass_purchase(PDO $pdo, array $config, array $input_data): void 
 
     // 1. 校验班次
     ensure_active_shift_or_fail($pdo);
-    
+
     $store_id = (int)$_SESSION['pos_store_id'];
     $user_id = (int)$_SESSION['pos_user_id'];
-    $device_id = (int)($_SESSION['pos_device_id'] ?? 0); // 修复可能的拼写错误
+    $device_id = (int)($_SESSION['pos_device_id'] ?? 0);
 
     // 2. 校验输入
     $cart_item = $input_data['cart_item'] ?? null;
     $member_id = (int)($input_data['member_id'] ?? 0);
+    $secondary_phone_input = trim($input_data['secondary_phone_input'] ?? '');
+    $payment_method = strtolower(trim($input_data['payment']['summary'][0]['method'] ?? ''));
 
     if (!$cart_item || !is_array($cart_item) || !$member_id) {
         json_error('Invalid input: cart_item and member_id are required.', 400);
     }
     if (empty($cart_item['sku'])) {
         json_error('Invalid input: cart_item must have a sku.', 400);
+    }
+
+    // ==== 4.1 PRE-PURCHASE VALIDATION ====
+
+    // Validate: Order contains only the pass item, no other products
+    // Since this is a pass purchase flow, we expect cart_item to be a single item
+    // The frontend should ensure cart is empty before allowing pass purchase
+
+    // Validate: No discounts/coupons/points applied
+    $promo_result = $input_data['promo_result'] ?? null;
+    if ($promo_result) {
+        $has_discounts = false;
+        if (isset($promo_result['coupon_discount']) && $promo_result['coupon_discount'] > 0) {
+            $has_discounts = true;
+        }
+        if (isset($promo_result['points_discount']) && $promo_result['points_discount'] > 0) {
+            $has_discounts = true;
+        }
+        if (isset($promo_result['promo_discount']) && $promo_result['promo_discount'] > 0) {
+            $has_discounts = true;
+        }
+
+        if ($has_discounts) {
+            // Determine language from session or default to Chinese
+            $lang = $_SESSION['pos_lang'] ?? 'zh';
+            if ($lang === 'es') {
+                json_error('No se permiten cupones, descuentos ni puntos al comprar una tarjeta promocional. Por favor, elimine todas las promociones del pedido.', 400);
+            } else {
+                json_error('购买优惠卡时不允许使用优惠券、折扣或积分，请先取消订单中的所有优惠。', 400);
+            }
+        }
     }
 
     try {
@@ -224,6 +257,37 @@ function handle_pass_purchase(PDO $pdo, array $config, array $input_data): void 
             json_error('Member not found.', 404);
         }
 
+        // ==== 4.2 MEMBER REQUIREMENT AND SECONDARY PHONE VERIFICATION ====
+
+        // Compare secondary_phone_input with member's stored phone
+        $member_phone = trim($member['phone_number'] ?? $member['phone'] ?? '');
+
+        // Sanitize both phone numbers for comparison (remove spaces, dashes, etc.)
+        $sanitized_input = preg_replace('/[^\d+]/', '', $secondary_phone_input);
+        $sanitized_member = preg_replace('/[^\d+]/', '', $member_phone);
+
+        if ($sanitized_input !== $sanitized_member) {
+            $pdo->rollBack();
+            $lang = $_SESSION['pos_lang'] ?? 'zh';
+            if ($lang === 'es') {
+                json_error('El número de teléfono introducido en la segunda verificación no coincide con el miembro actualmente conectado. Si desea cambiar de cliente, primero cierre la sesión del miembro actual y vuelva a iniciar sesión con el número correcto antes de realizar la compra.', 400);
+            } else {
+                json_error('二次输入的手机号与当前登录会员不一致。如需更换会员，请先退出当前会员，再用正确手机号登录后重新购买。', 400);
+            }
+        }
+
+        // ==== 4.3 PAYMENT METHOD VALIDATION (Cash / Card only) ====
+
+        if ($payment_method !== 'cash' && $payment_method !== 'card') {
+            $pdo->rollBack();
+            $lang = $_SESSION['pos_lang'] ?? 'zh';
+            if ($lang === 'es') {
+                json_error('La compra de tarjetas promocionales solo admite efectivo o tarjeta bancaria. Por favor, cambie el método de pago.', 400);
+            } else {
+                json_error('购买优惠卡仅支持现金或银行卡支付，请更改支付方式。', 400);
+            }
+        }
+
         // 5. 检查次卡定义 (依赖: pos_repo_ext_pass.php)
         $plan_details = get_pass_plan_by_sku($pdo, $cart_item['sku']);
         if (!$plan_details) {
@@ -233,7 +297,7 @@ function handle_pass_purchase(PDO $pdo, array $config, array $input_data): void 
         // 6. 检查购买限制 (依赖: pos_pass_helper.php)
         // B1 阶段简化: 暂不实现复杂的限制
         // check_pass_purchase_limits($pdo, $member_id, $plan_details);
-        
+
         // 7. 分配 VR 票号
         // 7a. 获取门店配置 (依赖: pos_repo.php)
         $store_config = get_store_config_full($pdo, $store_id);
@@ -252,25 +316,43 @@ function handle_pass_purchase(PDO $pdo, array $config, array $input_data): void 
             'member_id' => $member_id
         ];
         $member_pass_id = create_pass_records($pdo, $context, $vr_info, $cart_item, $plan_details);
-        
-        // 9. (B1 阶段) 支付信息暂不处理，假设前端已收款
-        // TODO (B3): 记录支付详情到 topup_orders
-        
+
+        // 9. Record payment details (from input)
+        // TODO: Store payment details in topup_orders if needed
+
         // 10. 提交事务
         $pdo->commit();
-        
+
         // 11. 准备打印数据 (B1 阶段可选, B2 必须)
         $print_jobs = [
             // [TODO B2] 在此构建 VR 售卡小票
         ];
 
-        // [GEMINI LOGIC BUG FIX 2025-11-16] 修复 json_ok 参数颠倒
+        // ==== 4.5 RESPONSE AND ACTIONS ====
+
+        // Mask phone for display (show first 3 and last 4 digits)
+        $phone_masked = $member_phone;
+        if (strlen($member_phone) > 7) {
+            $phone_masked = substr($member_phone, 0, 3) . '****' . substr($member_phone, -4);
+        }
+
         json_ok([
-            'topup_order_id' => $member_pass_id, // B1 阶段 $member_pass_id 即是
-            'vr_invoice_number' => $vr_info['series'] . '-' . $vr_info['number'],
-            'member_pass_id' => $member_pass_id,
+            'success' => true,
+            'message' => 'PASS_PURCHASE_SUCCESS',
+            'actions' => [
+                'LOGOUT_MEMBER',
+                'CLEAR_ORDER',
+                'RESET_TO_HOME',
+                'SHOW_PASS_SUCCESS_PAGE'
+            ],
+            'data' => [
+                'pass_id' => $member_pass_id,
+                'member_id' => $member_id,
+                'phone_masked' => $phone_masked,
+                'vr_invoice_number' => $vr_info['series'] . '-' . $vr_info['number']
+            ],
             'print_jobs' => $print_jobs
-        ], 'Top-up successful.');
+        ], 'Pass purchase successful.');
 
     } catch (PDOException $e) {
         $pdo->rollBack();
