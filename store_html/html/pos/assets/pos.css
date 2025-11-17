@@ -1,0 +1,347 @@
+:root{
+  --brand:#ED7762;
+
+  /* Linen Light T+：浅色、对比适中 */
+  --bg-0:#EEF2F6;
+  --surface-1:#FAFBFD;
+  --surface-2:#E1E8F2;
+  --chip:#D7E0EC;
+  --chip-border:#B5C1D2;
+  --ink:#0F172A;
+  --border:#C7CFDA;
+  --ring:rgba(237,119,98,.28);
+
+  /* 搜索更醒目 */
+  --search-bg:#D1DAE6;
+  --search-border:#9FB0C5;
+
+  --tap:48px;
+}
+
+/* --- FIX: Add padding for Tablet Status Bar --- */
+.navbar.fixed-top {
+  padding-top: env(safe-area-inset-top);
+}
+/* --- End Fix --- */
+
+
+html,body{height:100%;}
+body{
+  background: linear-gradient(180deg, var(--bg-0) 0%, #E8EEF4 100%);
+  color:var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial;
+}
+
+.bg-surface{ background-color: var(--surface-1)!important; border-bottom:1px solid var(--border); }
+.pos-container{ 
+  /* --- FIX: Adjust top padding to account for safe area --- */
+  padding-top: calc(4.25rem + env(safe-area-inset-top)); 
+  padding-bottom:5.5rem; 
+}
+.text-brand{ color:var(--brand)!important; }
+.bg-brand-soft{ background: rgba(237,119,98,.16)!important; }
+.brand-dot{ width:10px; height:10px; border-radius:50%; background:var(--brand); display:inline-block; }
+
+.btn-brand{
+  --bs-btn-bg: var(--brand); --bs-btn-border-color: var(--brand);
+  --bs-btn-hover-bg: #d26350; --bs-btn-hover-border-color: #d26350;
+  --bs-btn-active-bg: #c75947; --bs-btn-active-border-color: #c75947; --bs-btn-color:#fff;
+  min-height: var(--tap);
+  box-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 1px 2px rgba(16,24,40,.08);
+}
+.btn-outline-ink{
+  color:var(--ink);
+  background: var(--surface-2);
+  border:1px solid var(--border);
+  min-height: var(--tap);
+  box-shadow: 0 1px 0 rgba(255,255,255,.4) inset;
+}
+.btn-outline-ink:hover{ background:#D5DEEA; }
+
+/* 底部条 + 左/右手模式（留缝） */
+.pos-bottombar{
+  position: fixed; inset-block-end:0; inset-inline:0;
+  background: var(--surface-1);
+  padding:.6rem 0;
+  z-index:1030;
+  border-top:1px solid var(--border);
+  /* --- FIX: Add padding for Tablet Bottom Bar/Home Indicator --- */
+  padding-bottom: calc(0.6rem + env(safe-area-inset-bottom));
+}
+body.righty-mode #bottom_bar{ flex-direction: row-reverse; }
+body.righty-mode #bottom_bar > .text-end{ order:2; margin-inline:0 1rem; }
+body.righty-mode #btn_ops{ order:1; margin-right:.5rem; }
+body.righty-mode #btn_cart_open{ order:0; margin-left:.5rem; }
+
+body.lefty-mode #bottom_bar{ flex-direction: row; }
+body.lefty-mode #bottom_bar > .text-end{ order:2; margin-inline:1rem 0; }
+body.lefty-mode #btn_ops{ order:0; margin-right:.5rem; }
+body.lefty-mode #btn_cart_open{ order:1; margin-left:.5rem; }
+
+/* 搜索 */
+.search-box.prominent .form-control,
+.search-box.prominent .input-group-text,
+.search-box.prominent .btn{
+  background: var(--search-bg);
+  color: var(--ink);
+  border-color: var(--search-border);
+}
+.search-box.prominent .form-control::placeholder{ color:#55657C; }
+.search-box.prominent .form-control:focus{ outline:0; box-shadow: 0 0 0 3px var(--ring); border-color:#d26350; }
+.search-box.prominent{ border-radius:.9rem; overflow:hidden; }
+
+/* 分类 chips */
+#category_scroller .nav-link{
+  background: var(--chip);
+  color: var(--ink);
+  border:1px solid var(--chip-border);
+  padding:.72rem 1.1rem;
+  border-radius:.95rem;
+  white-space: nowrap;
+  font-weight:800;
+  min-height: var(--tap);
+}
+#category_scroller .nav-link:hover{ background:#CBD7E7; }
+#category_scroller .nav-link.active{
+  background: var(--brand);
+  color:#fff;
+  border-color:#c75947;
+}
+
+/* 商品卡 */
+.product-card{
+  background: var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:1rem;
+  padding:1rem;
+  cursor:pointer;
+  transition: transform .06s ease, box-shadow .06s ease, border-color .06s;
+  box-shadow: 0 10px 22px rgba(16, 24, 40, .06);
+  min-height: 140px;
+}
+.product-card:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(16, 24, 40, .10);
+  border-color: #B6C2D1;
+}
+.product-title{ font-weight:800; letter-spacing:.2px; font-size:1.02rem; }
+.product-price{ font-weight:800; font-size:1.1rem; }
+.product-badge{ background: rgba(237,119,98,.16); color:var(--brand); border:1px solid var(--border); }
+
+/* Sheet / Modal */
+.offcanvas-sheet, .modal-sheet .modal-content{
+  color: var(--ink);
+  background: var(--surface-1);
+  border:1px solid var(--border);
+  box-shadow: 0 12px 30px rgba(16,24,40,.10);
+}
+.modal-sheet .modal-header, .offcanvas-sheet .offcanvas-header{
+  background: var(--surface-2);
+  border-bottom:1px solid var(--border);
+}
+.list-group-flush .list-group-item{
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--border);
+}
+
+/* [FIX 4.png] 换个醒目点的颜色 (使其更接近品牌色) */
+.alert.alert-sheet{
+  background-color: rgba(237, 119, 98, 0.1); /* --brand-soft */
+  color: #c75947; /* darker brand */
+  border: 1px solid rgba(237, 119, 98, 0.25);
+  font-weight: 500;
+}
+.border-sheet{ border-color: var(--border)!important; }
+
+/* 圆角 pill / Chip / 步进器 */
+.btn-pill{
+  color: var(--ink);
+  background: var(--surface-2);
+  border:1px solid var(--border);
+  border-radius:999px; padding:.7rem 1.1rem; margin-right:.35rem; font-weight:800; min-height: var(--tap);
+}
+.btn-check:checked + .btn-pill{ background: var(--brand); color:#fff; border-color:#c75947; }
+
+.addon-chip{
+  border:1px solid var(--border); background: var(--surface-2); color: var(--ink);
+  padding:.7rem 1.1rem; border-radius:.85rem; user-select:none; cursor:pointer; font-weight:800; min-height: var(--tap);
+}
+.addon-chip.active{ background: var(--brand); color:#fff; border-color:#c75947; }
+
+.qty-stepper{ display:flex; align-items:center; gap:.6rem; }
+.qty-stepper .btn{ width:2.5rem; height:2.5rem; padding:0; display:flex; align-items:center; justify-content:center; }
+
+/* 栅格：平板优化 */
+#product_grid{ --bs-gutter-x:.9rem; --bs-gutter-y:.9rem; }
+@media(min-width:576px){ #product_grid .col{ width:25%; } }
+@media(min-width:768px){ #product_grid .col{ width:20%; } }
+@media(min-width:992px){ #product_grid .col{ width:16.6667%; } }
+
+.toast{ opacity:.96; }
+
+/* [FIX 4-3.png] 修复：让提示框变得醒目 */
+#sys_toast.toast {
+  background-color: var(--brand);
+  color: #fff;
+  border-radius: 0.75rem;
+  border: 1px solid #c75947;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+#sys_toast .toast-body {
+  padding: 0.9rem 1.1rem;
+}
+
+
+.toast-container {
+    z-index: 9999 !important;
+}
+
+.flag{ font-size:16px; vertical-align:-2px; }
+
+/* 高峰模式（可选增强对比） */
+body.contrast-boost{
+  --bg-0:#E6EBF2; --surface-1:#FFFFFF; --surface-2:#DCE4EF;
+  --chip:#CCD8E8; --chip-border:#A9B7CB; --ink:#0B1220; --border:#A9B7CB;
+}
+
+/* NEW: Styles for Transaction Query List */
+.txn-item {
+    cursor: pointer;
+    transition: background-color .1s ease-in-out;
+}
+.txn-item:hover {
+    background-color: var(--surface-2);
+}
+
+/* --- 核心修复: EOD 漏结提示覆盖层样式 --- */
+#eod-block-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1060; /* 比 Bootstrap Modal Backdrop 高，比 Modal Content 低一点 */
+    background-color: rgba(0, 0, 0, 0.65); /* 更暗的背景 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    backdrop-filter: blur(3px); /* 增加模糊效果 */
+}
+
+.eod-block-content {
+    background-color: var(--surface-1, #fff);
+    color: var(--ink, #111);
+    border-radius: 0.8rem;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 500px; /* 限制最大宽度 */
+    overflow: hidden; /* 防止内容溢出 */
+}
+
+.eod-block-header {
+    background-color: #ffc107; /* Bootstrap 警告黄 */
+    color: #000;
+    padding: 0.8rem 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.eod-block-header .bi {
+    font-size: 1.3rem;
+}
+
+.eod-block-body {
+    padding: 1.5rem;
+    text-align: center;
+}
+.eod-block-body h4 {
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+.eod-block-body p {
+    margin-bottom: 0.5rem;
+}
+
+.eod-block-footer {
+    padding: 0.8rem 1rem;
+    background-color: var(--surface-2, #f1f1f1);
+    border-top: 1px solid var(--border, #ccc);
+    display: flex;
+    justify-content: space-between; /* 两端对齐 */
+    gap: 0.5rem;
+}
+.eod-block-footer .btn {
+    min-height: calc(var(--tap) * 0.9); /* 按钮稍微小一点 */
+}
+
+#paymentConfirmModal .fs-5 { letter-spacing:.2px; }
+
+/* --- NEW: Styles for Quick Cash & Payment Method Buttons --- */
+.btn-quick-cash {
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    flex-grow: 1;
+    background-color: var(--surface-2);
+    border-color: var(--border);
+}
+.btn-quick-cash:hover {
+    background-color: #D5DEEA;
+}
+
+#payment_method_selector .btn-outline-primary {
+    --bs-btn-color: #0d6efd;
+    --bs-btn-border-color: #0d6efd;
+    --bs-btn-hover-bg: #0d6efd;
+    --bs-btn-hover-border-color: #0d6efd;
+    --bs-btn-active-bg: #0a58ca;
+    --bs-btn-active-border-color: #0a53be;
+    font-weight: 600;
+    background-color: #e7f0ff;
+}
+/* === Minimal override: 固定首页商品为 5 列（每列 20%），少于 5 个也不拉宽 === */
+#product_grid > .col{
+  flex: 0 0 20% !important;
+  max-width: 20% !important;
+}
+
+/* [GEMINI SIF_DR_FIX] Style for pre-formatted text in modal */
+#sif_declaration_content {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 0.8rem;
+    background-color: var(--surface-2);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+}
+
+/* [新] 商品估清样式 */
+.product-card.product-card-sold-out {
+  opacity: 0.5;
+  background-color: var(--surface-2);
+  cursor: not-allowed;
+  position: relative; /* 确保徽章定位正确 */
+}
+
+.product-card.product-card-sold-out:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border);
+}
+
+/* [新] 估清面板的开关样式 */
+#availability_list_container .form-check-input {
+  width: 3em;
+  height: 1.5em;
+  margin-top: 0.5em;
+}
+#availability_list_container .form-check {
+  margin-top: 0;
+  padding-left: 4em; /* 为开关腾出空间 */
+}
+#availability_list_container .form-check .form-check-label {
+  padding-top: 0.25em;
+  white-space: nowrap;
+}
