@@ -219,11 +219,28 @@ function handle_pass_purchase(PDO $pdo, array $config, array $input_data): void 
     // ==== 4.1 PRE-PURCHASE VALIDATION ====
 
     // Validate: Order contains only the pass item, no other products
-    // Since this is a pass purchase flow, we expect cart_item to be a single item
-    // The frontend should ensure cart is empty before allowing pass purchase
+    // This is critical: pass purchases MUST be isolated from normal product sales
+
+    // Check for regular cart items (from normal cart flow OR from promo_result)
+    $cart = $input_data['cart'] ?? [];
+    $promo_result = $input_data['promo_result'] ?? null;
+
+    // If promo_result has a cart, use that (it's the calculated cart from frontend)
+    if ($promo_result && isset($promo_result['cart']) && is_array($promo_result['cart'])) {
+        $cart = $promo_result['cart'];
+    }
+
+    // Validate cart is empty - pass purchase must be standalone
+    if (!empty($cart) && count($cart) > 0) {
+        $lang = $_SESSION['pos_lang'] ?? 'zh';
+        if ($lang === 'es') {
+            json_error('Para comprar una tarjeta promocional, el pedido no puede contener otros productos. Por favor, finalice o vacíe el pedido actual.', 400);
+        } else {
+            json_error('购买优惠卡时，订单中不能包含其他商品，请先完成或清空当前订单。', 400);
+        }
+    }
 
     // Validate: No discounts/coupons/points applied
-    $promo_result = $input_data['promo_result'] ?? null;
     if ($promo_result) {
         $has_discounts = false;
         if (isset($promo_result['coupon_discount']) && $promo_result['coupon_discount'] > 0) {
@@ -235,9 +252,11 @@ function handle_pass_purchase(PDO $pdo, array $config, array $input_data): void 
         if (isset($promo_result['promo_discount']) && $promo_result['promo_discount'] > 0) {
             $has_discounts = true;
         }
+        if (isset($promo_result['discount_amount']) && $promo_result['discount_amount'] > 0) {
+            $has_discounts = true;
+        }
 
         if ($has_discounts) {
-            // Determine language from session or default to Chinese
             $lang = $_SESSION['pos_lang'] ?? 'zh';
             if ($lang === 'es') {
                 json_error('No se permiten cupones, descuentos ni puntos al comprar una tarjeta promocional. Por favor, elimine todas las promociones del pedido.', 400);
