@@ -251,7 +251,9 @@ function handle_pass_purchase(PDO $pdo, array $config, array $input_data): void 
             'device_id' => $device_id,
             'member_id' => $member_id
         ];
-        $member_pass_id = create_pass_records($pdo, $context, $vr_info, $cart_item, $plan_details);
+        $create_result = create_pass_records($pdo, $context, $vr_info, $cart_item, $plan_details);
+        $member_pass_id = (int)$create_result['member_pass_id'];
+        $topup_order_id = (int)$create_result['topup_order_id'];
         
         // 9. (B1 阶段) 支付信息暂不处理，假设前端已收款
         // TODO (B3): 记录支付详情到 topup_orders
@@ -266,7 +268,7 @@ function handle_pass_purchase(PDO $pdo, array $config, array $input_data): void 
 
         // [GEMINI LOGIC BUG FIX 2025-11-16] 修复 json_ok 参数颠倒
         json_ok([
-            'topup_order_id' => $member_pass_id, // B1 阶段 $member_pass_id 即是
+            'topup_order_id' => $topup_order_id,
             'vr_invoice_number' => $vr_info['series'] . '-' . $vr_info['number'],
             'member_pass_id' => $member_pass_id,
             'print_jobs' => $print_jobs

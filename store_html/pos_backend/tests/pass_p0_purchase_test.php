@@ -85,19 +85,21 @@ try {
     
     // 4. (P0) 执行核心事务：创建售卡记录
     echo "Executing create_pass_records() transaction...\n";
-    $member_pass_id = create_pass_records(
-        $pdo, 
-        $mock_context, 
-        $vr_info, 
-        $mock_cart_item, 
+    $create_result = create_pass_records(
+        $pdo,
+        $mock_context,
+        $vr_info,
+        $mock_cart_item,
         $plan_details
     );
-    echo "Transaction successful. New member_pass_id: $member_pass_id\n";
+    $member_pass_id = (int)$create_result['member_pass_id'];
+    $topup_order_id = (int)$create_result['topup_order_id'];
+    echo "Transaction successful. New member_pass_id: $member_pass_id (topup_order_id: $topup_order_id)\n";
     
     // 5. 验证结果
     echo "Verifying records (SELECT)...\n";
-    $stmt_topup = $pdo->prepare("SELECT * FROM topup_orders WHERE topup_order_id = (SELECT topup_order_id FROM member_passes WHERE member_pass_id = ?)");
-    $stmt_topup->execute([$member_pass_id]);
+    $stmt_topup = $pdo->prepare("SELECT * FROM topup_orders WHERE topup_order_id = ?");
+    $stmt_topup->execute([$topup_order_id]);
     $topup_order = $stmt_topup->fetch(PDO::FETCH_ASSOC);
 
     $stmt_pass = $pdo->prepare("SELECT * FROM member_passes WHERE member_pass_id = ?");

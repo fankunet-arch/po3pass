@@ -54,8 +54,12 @@ if (!function_exists('create_pass_records')) {
     /**
      * [B1.2] P0 售卡：创建售卡记录 (topup_orders)
      * (注意：B1 阶段简化，暂不处理支付详情，假设已支付)
+     *
+     * 返回值:
+     *  - member_pass_id: 新创建的 member_passes 主键
+     *  - topup_order_id: 对应的 topup_orders 主键
      */
-    function create_pass_records(PDO $pdo, array $context, array $vr_info, array $cart_item, array $plan_details): int {
+    function create_pass_records(PDO $pdo, array $context, array $vr_info, array $cart_item, array $plan_details): array {
         
         // 1. 获取上下文
         $store_id  = $context['store_id'];
@@ -67,6 +71,39 @@ if (!function_exists('create_pass_records')) {
         $now_utc = utc_now();
         $now_utc_str = $now_utc->format('Y-m-d H:i:s'); // B1 阶段的表 (topup_orders, member_passes) 均使用 0 精度
         $validity_days = (int)$plan_details['validity_days'];
+
+        // B1 阶段容错：前端可能传入 price/total 而非 unit_price_eur
+        $qty = max(1, (int)($cart_item['qty'] ?? 1));
+
+        // 尝试从多种字段获取单价，按优先级选择第一个有效值
+        $unit_price_candidates = [
+            $cart_item['unit_price_eur'] ?? null,
+            $cart_item['unit_price'] ?? null,
+            $cart_item['price'] ?? null,
+            // 如果 total 已给且数量有效，反推单价
+            (isset($cart_item['total']) && $qty > 0) ? ((float)$cart_item['total'] / $qty) : null,
+            // 兜底使用方案定价
+            $plan_details['price'] ?? null,
+            isset($plan_details['price_cent']) ? ((float)$plan_details['price_cent'] / 100) : null,
+        ];
+
+        $unit_price = 0.0;
+        foreach ($unit_price_candidates as $candidate) {
+            if ($candidate !== null && (float)$candidate > 0) {
+                $unit_price = (float)$candidate;
+                break;
+            }
+        }
+
+        $purchase_amount = isset($cart_item['total'])
+            ? (float)$cart_item['total']
+            : $unit_price * $qty;
+
+        if ($purchase_amount <= 0) {
+            throw new InvalidArgumentException('Purchase amount must be greater than zero.');
+        }
+
+        $purchase_amount = round($purchase_amount, 2);
         
         // 2. 写入 售卡订单 (VR)
         $sql_topup = "
@@ -80,8 +117,8 @@ if (!function_exists('create_pass_records')) {
         $stmt_topup->execute([
             $plan_details['pass_plan_id'],
             $member_id,
-            (int)$cart_item['qty'],
-            (float)$cart_item['unit_price_eur'], // B1 阶段, 总价 = 单价 * 1
+            $qty,
+            $purchase_amount,
             $store_id,
             $device_id,
             $user_id,
@@ -94,8 +131,7 @@ if (!function_exists('create_pass_records')) {
         // 3. (B1 阶段) 写入/激活 会员持卡
         // B1 阶段简化：售卡立即激活，不走审核
         // [B1.2] B1 阶段的实现：售卡订单只允许包含一个次卡商品，且数量为1
-        $total_uses_to_add = (int)$plan_details['total_uses'] * (int)$cart_item['qty'];
-        $purchase_amount = (float)$cart_item['unit_price_eur'];
+        $total_uses_to_add = (int)$plan_details['total_uses'] * $qty;
         $unit_allocated_base = ($total_uses_to_add > 0) ? ($purchase_amount / $total_uses_to_add) : 0;
         
         // [A2 UTC SYNC] 计算 UTC 过期时间
@@ -123,7 +159,12 @@ if (!function_exists('create_pass_records')) {
             $expires_at_utc_str // expires_at
         ]);
         
-        return (int)$pdo->lastInsertId();
+        $member_pass_id = (int)$pdo->lastInsertId();
+
+        return [
+            'member_pass_id' => $member_pass_id,
+            'topup_order_id' => $topup_order_id,
+        ];
     }
 }
 
