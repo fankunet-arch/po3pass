@@ -224,18 +224,14 @@ export function initiatePaymentConfirmation(event) {
 }
 
 /**
- * [B1.3 PASS] 辅助函数：检查购物车是否为售卡订单
+ * [REMOVED] Old pass_product flow disabled.
+ * Pass purchases now ONLY go through discountCard.js (Flow A).
+ * This function is kept as a stub to avoid breaking references but always returns false.
  */
 function isPassPurchase(cart, tagsMap) {
-    if (!cart || cart.length === 0) return false;
-    // 检查是否 *所有* 商品都带 'pass_product' 标签
-    for (const item of cart) {
-        const itemTags = tagsMap[item.product_id] || [];
-        if (!itemTags.includes('pass_product')) {
-            return false; // 发现普通商品，不是纯售卡订单
-        }
-    }
-    return true; // 所有商品都是次卡商品
+    // Legacy pass_product flow is disabled.
+    // All pass purchases must go through the dedicated Discount Card UI.
+    return false;
 }
 
 
@@ -301,19 +297,22 @@ export async function submitOrder() {
             }
         }
 
-        // [B1.4 P3] START: 结账四向分流
+        // [UNIFIED FLOW] 结账三向分流
+        // Flow A: Discount Card Purchase (via discountCard.js)
+        // Flow B: Pass Redemption (via activePassSession)
+        // Flow C: Normal Orders
 
         let result;
         const isDiscountCardPurchase = STATE.purchasingDiscountCard !== null;
-        const isPurchase = isPassPurchase(STATE.cart, STATE.tags_map);
         const isRedemption = STATE.activePassSession !== null;
 
         if (isDiscountCardPurchase) {
-            // --- 0. [优惠卡购买] 优惠卡购买流程 ---
+            // --- Flow A: Discount Card Purchase (ONLY valid pass purchase flow) ---
             const card = STATE.purchasingDiscountCard;
 
             const purchaseData = {
                 member_id: card.member_id,
+                secondary_phone_input: card.secondary_phone_input, // 二次验证的手机号
                 cart_item: {
                     sku: card.sale_sku,
                     name: card.name_zh || card.name,
@@ -321,7 +320,8 @@ export async function submitOrder() {
                     price: parseFloat(card.sale_price || 0),
                     total: parseFloat(card.sale_price || 0)
                 },
-                payment: paymentPayload
+                payment: paymentPayload,
+                promo_result: STATE.calculatedCart // 传递促销结果用于验证
             };
 
             const response = await fetch('api/pos_api_gateway.php?res=pass&act=purchase', {
@@ -338,11 +338,11 @@ export async function submitOrder() {
             result = await response.json();
 
         } else if (isRedemption) {
-            // --- 1. P3 核销流程 ---
+            // --- Flow B: Pass Redemption ---
             if (!STATE.activeMember) {
                 throw new Error('核销次卡必须先关联会员。'); // 防御性检查
             }
-            
+
             // [B1.4 P3] P3 验证逻辑
             const pass = STATE.activePassSession;
             const itemsToRedeemCount = getRedemptionItemCount(STATE.cart, STATE.tags_map);
@@ -359,46 +359,26 @@ export async function submitOrder() {
             if (pass.daily_uses_remaining !== null && itemsToRedeemCount > pass.daily_uses_remaining) {
                 throw new Error(`今日剩余核销上限为 ${pass.daily_uses_remaining} 次 (当前 ${itemsToRedeemCount} 次)`);
             }
-            
+
             // 验证通过，调用核销 API
             result = await submitPassRedemptionAPI(paymentPayload);
-            
-        } else if (isPurchase) {
-            // --- 2. P0 售卡流程 ---
-            if (!STATE.activeMember) {
-                throw new Error('购买次卡必须先关联会员。');
-            }
-            result = await submitPassPurchaseAPI(paymentPayload);
-            
+
         } else {
-            // --- 3. 普通订单流程 ---
+            // --- Flow C: Normal Orders ---
+            // Legacy pass_product flow is DISABLED.
+            // If cart contains pass_product items, they should have been blocked at add-to-cart.
             result = await submitOrderAPI(paymentPayload);
         }
-        // [B1.4 P3] END: 结账三向分流
+        // END: 结账三向分流
 
         if (result.status === 'success') {
             bootstrap.Modal.getInstance('#paymentModal')?.hide();
 
             // [优惠卡购买] 如果是优惠卡购买，使用专用的成功处理
             if (isDiscountCardPurchase) {
-                const phone = STATE.activeMember?.phone_number || STATE.activeMember?.phone || '';
-                const maskedPhone = phone.length > 7
-                    ? phone.substring(0, 3) + 'XXXX' + phone.substring(phone.length - 4)
-                    : phone;
-
-                document.getElementById('success_bound_phone').textContent = maskedPhone;
-
-                // 清空状态
-                STATE.purchasingDiscountCard = null;
-                STATE.cart = [];
-                STATE.activeCouponCode = '';
-                STATE.calculatedCart = null;
-
-                // 退出会员
-                unlinkMember();
-
-                // 显示成功弹窗
-                new bootstrap.Modal('#cardPurchaseSuccessModal').show();
+                // 导入并调用 handleBackendActions
+                const { handleBackendActions } = await import('./discountCard.js');
+                handleBackendActions(result);
 
                 return; // 不再显示普通的成功弹窗
             }

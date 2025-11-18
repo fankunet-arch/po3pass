@@ -9,6 +9,7 @@ import { findMember, unlinkMember } from './member.js';
 
 let currentCard = null; // 当前选中的优惠卡
 let pendingPurchaseCard = null; // 待购买的优惠卡（二次验证后使用）
+let secondaryPhoneInput = null; // 二次验证的手机号
 
 /**
  * 打开优惠卡列表
@@ -234,7 +235,10 @@ export async function handlePhoneVerification(event) {
         return;
     }
 
-    // 验证通过，关闭验证弹窗
+    // 验证通过，保存二次输入的手机号（原始格式）
+    secondaryPhoneInput = document.getElementById('phone_verification_input').value.trim();
+
+    // 关闭验证弹窗
     bootstrap.Modal.getInstance(document.getElementById('phoneVerificationModal'))?.hide();
 
     // 进入支付流程
@@ -245,7 +249,7 @@ export async function handlePhoneVerification(event) {
  * 进入支付流程
  */
 async function proceedToPayment() {
-    if (!pendingPurchaseCard || !STATE.activeMember) {
+    if (!pendingPurchaseCard || !STATE.activeMember || !secondaryPhoneInput) {
         toast('购买信息丢失，请重新操作');
         return;
     }
@@ -253,7 +257,8 @@ async function proceedToPayment() {
     // 设置优惠卡购买模式
     STATE.purchasingDiscountCard = {
         ...pendingPurchaseCard,
-        member_id: STATE.activeMember.id
+        member_id: STATE.activeMember.id,
+        secondary_phone_input: secondaryPhoneInput // 保存二次验证的手机号
     };
 
     // 设置支付总额
@@ -277,6 +282,7 @@ export function handlePurchaseDone() {
     // 清空临时变量
     currentCard = null;
     pendingPurchaseCard = null;
+    secondaryPhoneInput = null;
 
     // 关闭所有 Offcanvas
     document.querySelectorAll('.offcanvas.show').forEach(el => {
@@ -285,6 +291,32 @@ export function handlePurchaseDone() {
     });
 
     toast(t('card_purchase_success'));
+}
+
+/**
+ * 处理后端返回的动作指令
+ * @param {Object} response - 后端返回的响应对象
+ */
+export function handleBackendActions(response) {
+    if (!response || response.status !== 'success') {
+        // 错误响应：不执行任何动作
+        return;
+    }
+
+    const actions = response.data?.actions || [];
+
+    // 检查是否包含成功动作
+    if (actions.includes('SHOW_PASS_SUCCESS_PAGE')) {
+        // 设置全局标志，表示需要在成功弹窗关闭后执行清理
+        STATE.passPurchaseCleanupPending = true;
+
+        // 显示成功弹窗
+        const phone = response.data?.phone_masked || STATE.activeMember?.phone_number || '';
+        document.getElementById('success_bound_phone').textContent = phone;
+
+        const modal = new bootstrap.Modal('#cardPurchaseSuccessModal');
+        modal.show();
+    }
 }
 
 /**

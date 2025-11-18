@@ -117,6 +117,7 @@ export const I18N = {
     error_cart_has_promotions: '购买优惠卡时不允许使用优惠券、折扣或积分，请先取消订单中的所有优惠。',
     error_member_required: '购买优惠卡需要先登录会员。',
     error_payment_method_invalid: '购买优惠卡时仅支持现金或银行卡支付，请更改支付方式。',
+    error_pass_use_discount_card_ui: '优惠卡请通过专用入口购买。请点击"优惠卡"按钮。',
     no_discount_cards: '暂无可购买的优惠卡',
 
     // --- Add EOD Print ---
@@ -352,6 +353,7 @@ export const I18N = {
     error_cart_has_promotions: 'No se permiten cupones, descuentos ni puntos al comprar una tarjeta promocional. Por favor, elimine todas las promociones del pedido.',
     error_member_required: 'Debe iniciar sesión como miembro para comprar una tarjeta promocional.',
     error_payment_method_invalid: 'La compra de tarjetas promocionales solo admite efectivo o tarjeta bancaria. Por favor, cambie el método de pago.',
+    error_pass_use_discount_card_ui: 'Las tarjetas promocionales deben comprarse a través de la entrada dedicada. Por favor, haga clic en el botón "Tarjetas Promocionales".',
     no_discount_cards: 'No hay tarjetas promocionales disponibles',
 
     availability_panel: 'Productos agotados',

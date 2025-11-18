@@ -347,21 +347,28 @@ export function renderProducts() {
     const isPassMode = STATE.activePassSession !== null;
 
     const filteredProducts = STATE.products.filter(p => {
+        const productTags = STATE.tags_map[p.id] || [];
+
+        // [PASS UNIFICATION] ALWAYS hide pass_product items from normal grid
+        // Pass purchases must ONLY go through the Discount Card UI
+        if (productTags.includes('pass_product')) {
+            return false;
+        }
+
         // [B1.4 PASS] START: P1 白名单过滤
         if (isPassMode) {
             // 在核销模式下，只显示包含 'pass_eligible_beverage' 标签的商品
-            const productTags = STATE.tags_map[p.id] || [];
             if (!productTags.includes('pass_eligible_beverage')) {
                 return false;
             }
         }
         // [B1.4 PASS] END: P1 白名单过滤
-        
+
         const inCategory = p.category_key === STATE.active_category_key;
         if (!inCategory) return false;
-        
+
         if (searchText) {
-            return p.title_zh.toLowerCase().includes(searchText) || 
+            return p.title_zh.toLowerCase().includes(searchText) ||
                    p.title_es.toLowerCase().includes(searchText);
             // 可以在这里添加 SKU 或拼音简称的搜索
         }

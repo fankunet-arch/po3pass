@@ -272,8 +272,37 @@ function bindEvents() {
   $document.on('click', '#btn_sold_out_decision_reset', handleSoldOutDecisionReset);
   // --- [估清] 结束 ---
 
+  // --- [优惠卡购买] 成功弹窗关闭后的清理 ---
+  const cardPurchaseSuccessModal = document.getElementById('cardPurchaseSuccessModal');
+  if (cardPurchaseSuccessModal) {
+    cardPurchaseSuccessModal.addEventListener('hidden.bs.modal', function() {
+      // 检查是否需要执行清理操作
+      if (STATE.passPurchaseCleanupPending) {
+        // 执行清理操作
+        STATE.purchasingDiscountCard = null;
+        STATE.cart = [];
+        STATE.activeCouponCode = '';
+        STATE.calculatedCart = { cart: [], subtotal: 0, discount_amount: 0, final_total: 0 };
+        STATE.payment = { total: 0, parts: [] };
 
-  console.log("Event bindings complete."); 
+        // 退出会员
+        unlinkMember();
+
+        // 刷新UI，返回首页
+        calculatePromotions();
+        refreshCartUI();
+        updateMemberUI();
+        renderCategories();
+        renderProducts();
+
+        // 重置标志
+        STATE.passPurchaseCleanupPending = false;
+      }
+    });
+  }
+  // --- [优惠卡购买] 结束 ---
+
+  console.log("Event bindings complete.");
 }
 
 // [GEMINI 架构] 移除所有估清函数 (handleSoldOutDecisionKeep, handleSoldOutDecisionReset, 

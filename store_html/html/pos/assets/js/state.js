@@ -35,6 +35,7 @@ export const STATE = {
   activeRedemptionRuleId: null,
   activePassSession: null, // [B1.4 PASS] 新增次卡会话状态
   purchasingDiscountCard: null, // [优惠卡购买] 当前正在购买的优惠卡
+  passPurchaseCleanupPending: false, // [优惠卡购买] 成功后需要清理的标志
   calculatedCart: { cart: [], subtotal: 0, discount_amount: 0, final_total: 0 },
   payment: { total: 0, parts: [] },
   holdSortBy: 'time_desc',
@@ -51,9 +52,9 @@ export const STATE = {
   // 新字段
   ui: { selected_category_id: null, search_text: '', hand: 'right', peak: false },
   flags: { loading: false },
-  
+
   // [GHOST_SHIFT_FIX v5.2] 存储幽灵班次信息
-  ghostShiftInfo: null 
+  ghostShiftInfo: null
 };
 if (typeof window !== 'undefined') window.STATE = STATE;
 
