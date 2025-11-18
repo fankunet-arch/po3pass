@@ -33,6 +33,15 @@ export function addToCart() {
         return;
     }
 
+    // [PASS UNIFICATION] Block pass_product items from normal cart
+    // Pass purchases must ONLY go through the Discount Card UI
+    const productTags = STATE.tags_map[product.id] || [];
+    if (productTags.includes('pass_product')) {
+        toast(t('error_pass_use_discount_card_ui') || '优惠卡请通过专用入口购买 / Please use the Discount Card UI to purchase passes');
+        bootstrap.Offcanvas.getInstance($canvas[0])?.hide();
+        return;
+    }
+
     const selectedVariantId = parseInt($('input[name="variant_selector"]:checked').val());
     const variant = product.variants.find(v => v.id === selectedVariantId);
     if (!variant) {
